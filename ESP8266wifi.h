@@ -95,6 +95,11 @@ public:
     char* getIP();
     char* getMAC();
     
+    /**
+     * Custom by Hidro
+     */
+    bool httpGET(const char* host, const char* port, String & uri, String& query);
+	bool httpPOST(const char* host, const char* port, const char* uri, const char* query);
     /*
      * Connecting with TCP to server
      * (reconnect logic is applied, if conn lost or not established, or esp8266 restarted)
