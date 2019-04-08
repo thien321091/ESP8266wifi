@@ -182,6 +182,13 @@ In ESP8266wifi.h you can change some stuff:
     *  char _localAPSSID[16];
     *  char _localAPPassword[16];
 
+## Add more by Hidro Le
+
+```
+  String *query = new String("name=1323");
+		String *uri = new String("/urn_path_to_post/");
+		_currentEsp->httpPOST(_server->_host, _server->_port, uri->c_str(), query->c_str());
+```
 
 
 

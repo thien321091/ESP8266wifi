@@ -683,3 +683,123 @@ char ESP8266wifi::readChar() {
         delayMicroseconds(50); // don't know why
     return c;
 }
+
+/**
+Custom by Hidro
+*/
+
+/**
+ *	url: "/abc/"
+ *  query: key=value&key2=value2
+ */
+bool ESP8266wifiClass::httpGET(const char* host, const char* port, String & uri, String& query) {
+	if (isConnectedToServer()) {
+		connectToServer(host, port);
+	}
+	if (isConnectedToServer()) {
+		String httpQuery = "GET " + uri + "?" + query + " HTTP/1.1\r\nHost: " + host + ":" + String(port) + "\r\nConnection: close\r\n\r\n";
+		send(WEBSITE, (&httpQuery)->c_str(), true);
+		disconnectFromServer();
+	}
+}
+
+/**
+*	url: "/abc/"
+*	query: key=value&key2=value2
+*/
+bool ESP8266wifiClass::httpPOST(const char* host, const char* port, const char* uri,const char* query) {
+
+	watchdog();
+	//esp.println("AT+CIPSTART=\"TCP\",\"" + server + "\",80"); //start a TCP connection.
+	while (!isConnectedToServer()) {
+		if (flags.debug) {
+			Serial.println(F("Connect To Server"));
+		}
+		connectToServer(host, port);
+	}
+	if (isConnectedToServer()) {
+		byte sendStatus;
+		if (flags.debug) {
+			Serial.println(F("Connected To Server"));
+			Serial.println(F("Before Send"));
+		}
+		
+		uint8_t	length = 93;
+		//length += 5; // strlen("POST "); //5
+		length += strlen(uri);
+		//length += 11; //strlen(" HTTP/1.1\r\n"); //11
+		//length += 6; //strlen("Host: "); //6
+		length += strlen(host);
+		//length += 2; //strlen("\r\n");
+		//length += 16; //strlen("Content-Length: "); //16
+		uint8_t queryLength = strlen(query);
+		uint8_t _queryLength = queryLength;
+		uint8_t lengthCount = 0;
+		for (; queryLength != 0; queryLength /= 10, lengthCount++) {};
+		length += lengthCount;
+		//delete &lengthCount;
+		//delete &queryLength;
+		
+
+		//length += 2; // strlen("\r\n"); //2
+		//length += 51; //strlen("Content-Type: application/x-www-form-urlencoded\r\n\r\n"); //51
+		length += _queryLength;
+
+		//delete &_queryLength;
+		if (flags.endSendWithNewline)
+			length += 2;
+		
+		writeCommand(CIPSEND);
+		_serialIn->print(WEBSITE);
+		writeCommand(COMMA);
+		_serialIn->println(length);
+
+		byte prompt = readCommand(1000, PROMPT, LINK_IS_NOT);
+		if (flags.debug) {
+			Serial.print(F("DEBUG HERE (prompt): "));
+			Serial.println(prompt);
+		}
+		if (prompt == 1) {
+			
+			
+			//Send Header
+			writeCommand(POST);
+			_serialIn->print(uri);
+			writeCommand(HTTP);
+			writeCommand(EOL_COMMAND);
+
+			writeCommand(HOST);
+			_serialIn->println(host);
+			
+
+			writeCommand(CONTENT_LENGTH);
+			_serialIn->println(strlen(query));
+
+
+			writeCommand(CONTENT_TYPE, EOL_COMMAND);
+			_serialIn->println(query);
+
+			
+			byte sendStatus = readCommand(5000, SEND_OK, BUSY);
+			//msgOut[0] = '\0';
+			if (sendStatus == 1) {
+				if (flags.debug) {
+					Serial.println(F("Send Completed"));
+					/*String response = _serialIn->readString();
+					long num; 
+					num = mid_num(response);
+					Serial.print(num);
+					Serial.println(F("---"));*/
+				}
+				//disconnectFromServer();
+				return true;
+			}
+		}
+		disconnectFromServer();
+		if (flags.debug) {
+			Serial.println(F("Send failed"));
+		}
+	}
+	//disconnectFromServer();
+	return false;
+}
